@@ -7,6 +7,7 @@ export default function GameDetail({ gameId, onBack }) {
   const [loading, setLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [editedStats, setEditedStats] = useState([])
+  const [editedTeamBScore, setEditedTeamBScore] = useState(0)
 
   useEffect(() => {
     loadGameDetail()
@@ -25,6 +26,7 @@ export default function GameDetail({ gameId, onBack }) {
       
       if (gameError) throw gameError
       setGame(gameData)
+      setEditedTeamBScore(gameData.team_b_score) // 初始化客隊分數
       
       // 載入球員數據
       const { data: statsData, error: statsError } = await supabase
@@ -98,7 +100,10 @@ export default function GameDetail({ gameId, onBack }) {
       // 更新比賽分數
       const { error: gameError } = await supabase
         .from('games')
-        .update({ team_a_score: teamAScore })
+        .update({ 
+          team_a_score: teamAScore,
+          team_b_score: editedTeamBScore
+        })
         .eq('id', gameId)
       
       if (gameError) throw gameError
@@ -115,6 +120,7 @@ export default function GameDetail({ gameId, onBack }) {
 
   const handleCancelEdit = () => {
     setEditedStats([...playerStats]) // 恢復原始數據
+    setEditedTeamBScore(game.team_b_score) // 恢復客隊分數
     setIsEditing(false)
   }
 
@@ -240,7 +246,17 @@ export default function GameDetail({ gameId, onBack }) {
               <div className="text-2xl text-dark/40">-</div>
               <div className="text-center">
                 <div className="text-sm text-dark/60 mb-1">{game.team_b_name}</div>
-                <div className="text-5xl font-serif font-bold text-dark/60">{game.team_b_score}</div>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    min="0"
+                    value={editedTeamBScore}
+                    onChange={(e) => setEditedTeamBScore(parseInt(e.target.value) || 0)}
+                    className="text-5xl font-serif font-bold text-dark/60 w-32 text-center border-2 border-accent/30 rounded-lg px-2 py-1"
+                  />
+                ) : (
+                  <div className="text-5xl font-serif font-bold text-dark/60">{game.team_b_score}</div>
+                )}
               </div>
             </div>
           </div>
