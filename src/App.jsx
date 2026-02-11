@@ -26,10 +26,6 @@ function App() {
   const handleStartGame = (teamData) => {
     setTeams(teamData)
     
-    // 儲存球員名單到 localStorage
-    const playerNames = teamData.teamA.players.map(p => p.name)
-    localStorage.setItem('lastPlayerNames', JSON.stringify(playerNames))
-    
     // 只初始化主隊球員的統計數據（包含投籃命中率）
     const initialStats = {}
     teamData.teamA.players.forEach(player => {

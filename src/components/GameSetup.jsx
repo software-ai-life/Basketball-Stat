@@ -1,24 +1,56 @@
 import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics }) {
   const [teamAName, setTeamAName] = useState('主隊')
   const [teamBName, setTeamBName] = useState('客隊')
   const [teamAPlayers, setTeamAPlayers] = useState([''])
+  const [loading, setLoading] = useState(true)
 
-  // 載入上次的球員名單
+  // 從資料庫載入上次比賽的球員名單
   useEffect(() => {
-    const savedPlayerNames = localStorage.getItem('lastPlayerNames')
-    if (savedPlayerNames) {
-      try {
-        const names = JSON.parse(savedPlayerNames)
-        if (names.length > 0) {
-          setTeamAPlayers(names)
-        }
-      } catch (error) {
-        console.error('載入球員名單失敗:', error)
-      }
-    }
+    loadLastGamePlayers()
   }, [])
+
+  const loadLastGamePlayers = async () => {
+    if (!supabase) {
+      setLoading(false)
+      return
+    }
+
+    try {
+      // 查詢最近一場比賽
+      const { data: lastGame, error: gameError } = await supabase
+        .from('games')
+        .select('id')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (gameError || !lastGame) {
+        setLoading(false)
+        return
+      }
+
+      // 查詢該場比賽的球員名單
+      const { data: playerStats, error: statsError } = await supabase
+        .from('player_stats')
+        .select('player_name')
+        .eq('game_id', lastGame.id)
+        .order('player_name')
+
+      if (statsError) throw statsError
+
+      if (playerStats && playerStats.length > 0) {
+        const playerNames = playerStats.map(stat => stat.player_name)
+        setTeamAPlayers(playerNames)
+      }
+    } catch (error) {
+      console.error('載入球員名單失敗:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const addPlayer = () => {
     setTeamAPlayers([...teamAPlayers, ''])
@@ -70,7 +102,7 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics 
             <span className="text-accent text-lg">★</span>
             <span className="text-xs text-dark/60 uppercase tracking-wider">籃球計分系統</span>
           </div>
-          <h1 className="text-5xl font-serif font-bold mb-4 text-dark">Experience</h1>
+          <h1 className="text-5xl font-serif font-bold mb-4 text-dark">🏀 Basketball Scoreboard</h1>
           <h2 className="text-4xl font-serif text-accent mb-4">籃球計分</h2>
           <p className="text-dark/60 text-sm max-w-md mx-auto">
             專為比賽設計的計分系統，讓您專注於球賽本身
