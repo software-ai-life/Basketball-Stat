@@ -5,6 +5,8 @@ export default function GameDetail({ gameId, onBack }) {
   const [game, setGame] = useState(null)
   const [playerStats, setPlayerStats] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedStats, setEditedStats] = useState([])
 
   useEffect(() => {
     loadGameDetail()
@@ -33,6 +35,7 @@ export default function GameDetail({ gameId, onBack }) {
       
       if (statsError) throw statsError
       setPlayerStats(statsData || [])
+      setEditedStats(statsData || []) // 初始化編輯數據
       
     } catch (error) {
       console.error('載入比賽詳情錯誤:', error)
@@ -44,6 +47,75 @@ export default function GameDetail({ gameId, onBack }) {
   const calculatePercentage = (made, attempted) => {
     if (attempted === 0) return '0'
     return ((made / attempted) * 100).toFixed(1)
+  }
+
+  const handleEditChange = (index, field, value) => {
+    const newStats = [...editedStats]
+    const numValue = parseInt(value) || 0
+    newStats[index] = {
+      ...newStats[index],
+      [field]: numValue
+    }
+    
+    // 自動計算 total_points
+    if (field === 'two_point_made' || field === 'three_point_made') {
+      const twoPoints = field === 'two_point_made' ? numValue : newStats[index].two_point_made
+      const threePoints = field === 'three_point_made' ? numValue : newStats[index].three_point_made
+      newStats[index].total_points = (twoPoints * 2) + (threePoints * 3)
+    }
+    
+    setEditedStats(newStats)
+  }
+
+  const handleSaveChanges = async () => {
+    try {
+      // 更新每個球員的數據
+      for (const stat of editedStats) {
+        const { error } = await supabase
+          .from('player_stats')
+          .update({
+            two_point_made: stat.two_point_made,
+            two_point_attempted: stat.two_point_attempted,
+            three_point_made: stat.three_point_made,
+            three_point_attempted: stat.three_point_attempted,
+            total_points: stat.total_points,
+            steals: stat.steals,
+            offensive_rebounds: stat.offensive_rebounds,
+            defensive_rebounds: stat.defensive_rebounds,
+            assists: stat.assists,
+            blocks: stat.blocks,
+            turnovers: stat.turnovers,
+            fouls: stat.fouls
+          })
+          .eq('id', stat.id)
+        
+        if (error) throw error
+      }
+      
+      // 重新計算總分
+      const teamAScore = editedStats.reduce((sum, stat) => sum + stat.total_points, 0)
+      
+      // 更新比賽分數
+      const { error: gameError } = await supabase
+        .from('games')
+        .update({ team_a_score: teamAScore })
+        .eq('id', gameId)
+      
+      if (gameError) throw gameError
+      
+      alert('✅ 修改已保存！')
+      setIsEditing(false)
+      loadGameDetail() // 重新載入數據
+      
+    } catch (error) {
+      console.error('保存失敗:', error)
+      alert('❌ 保存失敗: ' + error.message)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditedStats([...playerStats]) // 恢復原始數據
+    setIsEditing(false)
   }
 
   const calculateTeamStats = () => {
@@ -112,13 +184,39 @@ export default function GameDetail({ gameId, onBack }) {
   return (
     <div className="min-h-screen bg-cream p-4 pb-20">
       <div className="max-w-4xl mx-auto">
-        {/* 返回按鈕 */}
-        <button
-          onClick={onBack}
-          className="mb-4 px-4 py-2 text-dark/60 hover:text-dark transition-colors flex items-center gap-2"
-        >
-          ← 返回
-        </button>
+        {/* 返回按鈕和編輯按鈕 */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={onBack}
+            className="px-4 py-2 text-dark/60 hover:text-dark transition-colors flex items-center gap-2"
+          >
+            ← 返回
+          </button>
+          
+          {!isEditing ? (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
+            >
+              ✏️ 編輯數據
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 bg-gray-200 text-dark rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSaveChanges}
+                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
+              >
+                💾 保存修改
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* 比賽標題 */}
         <div className="card p-6 mb-6">
@@ -216,7 +314,7 @@ export default function GameDetail({ gameId, onBack }) {
                 </tr>
               </thead>
               <tbody>
-                {playerStats.map((player, index) => {
+                {(isEditing ? editedStats : playerStats).map((player, index) => {
                   const totalFgMade = (player.two_point_made || 0) + (player.three_point_made || 0)
                   const totalFgAttempted = (player.two_point_attempted || 0) + (player.three_point_attempted || 0)
                   const totalRebounds = (player.offensive_rebounds || 0) + (player.defensive_rebounds || 0)
@@ -232,8 +330,157 @@ export default function GameDetail({ gameId, onBack }) {
                         <div className="text-xs text-dark/40">{totalFgMade}/{totalFgAttempted}</div>
                       </td>
                       <td className="py-3 px-2 text-center">
-                        <div className="font-medium">{calculatePercentage(player.two_point_made, player.two_point_attempted)}%</div>
-                        <div className="text-xs text-dark/40">{player.two_point_made}/{player.two_point_attempted}</div>
+                        {isEditing ? (
+                          <div className="space-y-1">
+                            <div className="flex gap-1 justify-center">
+                              <input
+                                type="number"
+                                min="0"
+                                value={player.two_point_made}
+                                onChange={(e) => handleEditChange(index, 'two_point_made', e.target.value)}
+                                className="w-12 px-1 py-1 text-center border border-gray-300 rounded text-sm"
+                              />
+                              <span className="text-xs self-center">/</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={player.two_point_attempted}
+                                onChange={(e) => handleEditChange(index, 'two_point_attempted', e.target.value)}
+                                className="w-12 px-1 py-1 text-center border border-gray-300 rounded text-sm"
+                              />
+                            </div>
+                            <div className="text-xs text-dark/60">{calculatePercentage(player.two_point_made, player.two_point_attempted)}%</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="font-medium">{calculatePercentage(player.two_point_made, player.two_point_attempted)}%</div>
+                            <div className="text-xs text-dark/40">{player.two_point_made}/{player.two_point_attempted}</div>
+                          </>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        {isEditing ? (
+                          <div className="space-y-1">
+                            <div className="flex gap-1 justify-center">
+                              <input
+                                type="number"
+                                min="0"
+                                value={player.three_point_made}
+                                onChange={(e) => handleEditChange(index, 'three_point_made', e.target.value)}
+                                className="w-12 px-1 py-1 text-center border border-gray-300 rounded text-sm"
+                              />
+                              <span className="text-xs self-center">/</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={player.three_point_attempted}
+                                onChange={(e) => handleEditChange(index, 'three_point_attempted', e.target.value)}
+                                className="w-12 px-1 py-1 text-center border border-gray-300 rounded text-sm"
+                              />
+                            </div>
+                            <div className="text-xs text-dark/60">{calculatePercentage(player.three_point_made, player.three_point_attempted)}%</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="font-medium">{calculatePercentage(player.three_point_made, player.three_point_attempted)}%</div>
+                            <div className="text-xs text-dark/40">{player.three_point_made}/{player.three_point_attempted}</div>
+                          </>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        {isEditing ? (
+                          <div className="space-y-1">
+                            <div className="flex gap-1 justify-center">
+                              <input
+                                type="number"
+                                min="0"
+                                value={player.offensive_rebounds}
+                                onChange={(e) => handleEditChange(index, 'offensive_rebounds', e.target.value)}
+                                className="w-10 px-1 py-1 text-center border border-gray-300 rounded text-sm"
+                              />
+                              <span className="text-xs self-center">/</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={player.defensive_rebounds}
+                                onChange={(e) => handleEditChange(index, 'defensive_rebounds', e.target.value)}
+                                className="w-10 px-1 py-1 text-center border border-gray-300 rounded text-sm"
+                              />
+                            </div>
+                            <div className="text-xs text-dark/60">總 {totalRebounds}</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="font-medium">{totalRebounds}</div>
+                            <div className="text-xs text-dark/40">{player.offensive_rebounds}/{player.defensive_rebounds}</div>
+                          </>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={player.assists}
+                            onChange={(e) => handleEditChange(index, 'assists', e.target.value)}
+                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded text-sm"
+                          />
+                        ) : (
+                          <span className="font-medium">{player.assists || 0}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={player.steals}
+                            onChange={(e) => handleEditChange(index, 'steals', e.target.value)}
+                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded text-sm"
+                          />
+                        ) : (
+                          <span className="font-medium">{player.steals || 0}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={player.blocks}
+                            onChange={(e) => handleEditChange(index, 'blocks', e.target.value)}
+                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded text-sm"
+                          />
+                        ) : (
+                          <span className="font-medium">{player.blocks || 0}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={player.turnovers}
+                            onChange={(e) => handleEditChange(index, 'turnovers', e.target.value)}
+                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded text-sm"
+                          />
+                        ) : (
+                          <span className="font-medium">{player.turnovers || 0}</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="0"
+                            value={player.fouls}
+                            onChange={(e) => handleEditChange(index, 'fouls', e.target.value)}
+                            className="w-12 px-2 py-1 text-center border border-gray-300 rounded text-sm"
+                          />
+                        ) : (
+                          <span className="font-medium">{player.fouls || 0}</span>
+                        )}
+                      </td>
                       </td>
                       <td className="py-3 px-2 text-center">
                         <div className="font-medium">{calculatePercentage(player.three_point_made, player.three_point_attempted)}%</div>

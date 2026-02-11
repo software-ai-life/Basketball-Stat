@@ -99,25 +99,37 @@ export default function ScoreBoard({ teams, stats, onShot, onUndoShot, onScore, 
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onUndoShot(selectedPlayer, 2, false)}
-                    className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors text-xs font-medium"
-                  >
-                    ← 撒銷
-                  </button>
-                  <button
-                    onClick={() => handleShootClick(2, false)}
-                    className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-dark/70 rounded-lg transition-colors text-sm font-medium"
-                  >
-                    未進
-                  </button>
-                  <button
-                    onClick={() => handleShootClick(2, true)}
-                    className="flex-1 py-3 bg-accent/10 hover:bg-accent/20 text-accent rounded-lg transition-colors text-sm font-medium"
-                  >
-                    ✓ 進球
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleShootClick(2, false)}
+                      className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-dark/70 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      未進
+                    </button>
+                    <button
+                      onClick={() => handleShootClick(2, true)}
+                      className="flex-1 py-3 bg-accent/10 hover:bg-accent/20 text-accent rounded-lg transition-colors text-sm font-medium"
+                    >
+                      ✓ 進球
+                    </button>
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    <button
+                      onClick={() => onUndoShot(selectedPlayer, 2, false)}
+                      disabled={stats[selectedPlayer]?.twoPointAttempted === stats[selectedPlayer]?.twoPointMade}
+                      className="flex-1 py-2 bg-red-50 hover:bg-red-100 disabled:opacity-30 disabled:hover:bg-red-50 text-red-600 rounded-lg transition-colors font-medium"
+                    >
+                      ← 撒銷未進
+                    </button>
+                    <button
+                      onClick={() => onUndoShot(selectedPlayer, 2, true)}
+                      disabled={stats[selectedPlayer]?.twoPointMade === 0}
+                      className="flex-1 py-2 bg-red-50 hover:bg-red-100 disabled:opacity-30 disabled:hover:bg-red-50 text-red-600 rounded-lg transition-colors font-medium"
+                    >
+                      ← 撒銷進球
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -136,25 +148,37 @@ export default function ScoreBoard({ teams, stats, onShot, onUndoShot, onScore, 
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onUndoShot(selectedPlayer, 3, false)}
-                    className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors text-xs font-medium"
-                  >
-                    ← 撒銷
-                  </button>
-                  <button
-                    onClick={() => handleShootClick(3, false)}
-                    className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-dark/70 rounded-lg transition-colors text-sm font-medium"
-                  >
-                    未進
-                  </button>
-                  <button
-                    onClick={() => handleShootClick(3, true)}
-                    className="flex-1 py-3 bg-accent/10 hover:bg-accent/20 text-accent rounded-lg transition-colors text-sm font-medium"
-                  >
-                    ✓ 進球
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleShootClick(3, false)}
+                      className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-dark/70 rounded-lg transition-colors text-sm font-medium"
+                    >
+                      未進
+                    </button>
+                    <button
+                      onClick={() => handleShootClick(3, true)}
+                      className="flex-1 py-3 bg-accent/10 hover:bg-accent/20 text-accent rounded-lg transition-colors text-sm font-medium"
+                    >
+                      ✓ 進球
+                    </button>
+                  </div>
+                  <div className="flex gap-2 text-xs">
+                    <button
+                      onClick={() => onUndoShot(selectedPlayer, 3, false)}
+                      disabled={stats[selectedPlayer]?.threePointAttempted === stats[selectedPlayer]?.threePointMade}
+                      className="flex-1 py-2 bg-red-50 hover:bg-red-100 disabled:opacity-30 disabled:hover:bg-red-50 text-red-600 rounded-lg transition-colors font-medium"
+                    >
+                      ← 撒銷未進
+                    </button>
+                    <button
+                      onClick={() => onUndoShot(selectedPlayer, 3, true)}
+                      disabled={stats[selectedPlayer]?.threePointMade === 0}
+                      className="flex-1 py-2 bg-red-50 hover:bg-red-100 disabled:opacity-30 disabled:hover:bg-red-50 text-red-600 rounded-lg transition-colors font-medium"
+                    >
+                      ← 撒銷進球
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
