@@ -70,6 +70,18 @@ npm run dev
 npm run build
 ```
 
+### 5. 部署到 Zeabur（推薦）
+
+```bash
+git push origin main
+```
+
+詳細部署步驟請參考 [DEPLOYMENT.md](./DEPLOYMENT.md)
+
+- ⚡ 1-2 分鐘完成部署
+- 🌏 亞洲節點，台灣訪問速度快
+- 🚀 自動 CI/CD，推送即部署
+
 ## 使用流程
 
 ### 比賽前設定
