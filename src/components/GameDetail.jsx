@@ -481,20 +481,6 @@ export default function GameDetail({ gameId, onBack }) {
                           <span className="font-medium">{player.fouls || 0}</span>
                         )}
                       </td>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <div className="font-medium">{calculatePercentage(player.three_point_made, player.three_point_attempted)}%</div>
-                        <div className="text-xs text-dark/40">{player.three_point_made}/{player.three_point_attempted}</div>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <div className="font-medium">{totalRebounds}</div>
-                        <div className="text-xs text-dark/40">{player.offensive_rebounds}/{player.defensive_rebounds}</div>
-                      </td>
-                      <td className="py-3 px-2 text-center font-medium">{player.assists || 0}</td>
-                      <td className="py-3 px-2 text-center font-medium">{player.steals || 0}</td>
-                      <td className="py-3 px-2 text-center font-medium">{player.blocks || 0}</td>
-                      <td className="py-3 px-2 text-center font-medium">{player.turnovers || 0}</td>
-                      <td className="py-3 px-2 text-center font-medium">{player.fouls || 0}</td>
                     </tr>
                   )
                 })}
