@@ -99,6 +99,19 @@ Zeabur 會自動重新部署，完全不需要手動操作！
 
 ## 疑難排解
 
+### 502 Bad Gateway 錯誤
+這通常是端口配置問題。確保：
+1. `package.json` 的 `start` 命令使用 `vite preview --host --port 8080`
+2. 在 Zeabur 的服務設定中，Port 設定為 `8080`
+3. 重新部署服務
+
+**修正步驟**：
+```bash
+git add .
+git commit -m "修復 Zeabur 端口配置"
+git push origin main
+```
+
 ### 建置失敗
 1. 檢查 GitHub repo 是否有所有必要的檔案
 2. 確認 `package.json` 的 dependencies 正確
