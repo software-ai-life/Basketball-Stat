@@ -12,6 +12,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState('setup') // 'setup', 'game', 'history', 'analytics', 'gameDetail'
   const [selectedGameId, setSelectedGameId] = useState(null)
   const [gameStarted, setGameStarted] = useState(false)
+  const [gameDate, setGameDate] = useState(new Date().toISOString().split('T')[0]) // 比賽日期
   const [teams, setTeams] = useState({
     teamA: { name: '主隊', color: 'team-a', players: [] },
     teamB: { name: '客隊', color: 'team-b', players: [] }
@@ -159,7 +160,7 @@ function App() {
       const { data: gameData, error: gameError } = await supabase
         .from('games')
         .insert({
-          date: new Date().toISOString().split('T')[0],
+          date: gameDate, // 使用自訂日期
           team_a_name: teams.teamA.name,
           team_b_name: teams.teamB.name,
           team_a_score: scores.teamA,
@@ -222,6 +223,7 @@ function App() {
       setScores({ teamA: 0, teamB: 0 })
       setStats({})
       setView('scoreboard')
+      setGameDate(new Date().toISOString().split('T')[0]) // 重置日期
       setCurrentPage('setup')
     }
   }
@@ -251,6 +253,8 @@ function App() {
         onStartGame={handleStartGame}
         onViewHistory={() => setCurrentPage('history')}
         onViewAnalytics={() => setCurrentPage('analytics')}
+        gameDate={gameDate}
+        onGameDateChange={setGameDate}
       />
     )
   }

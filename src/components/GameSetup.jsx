@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics }) {
+export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics, gameDate, onGameDateChange }) {
   const [teamAName, setTeamAName] = useState('主隊')
   const [teamBName, setTeamBName] = useState('客隊')
   const [teamAPlayers, setTeamAPlayers] = useState([''])
@@ -126,7 +126,20 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics 
         </div>
 
         {/* Teams Setup */}
-        <div className="space-y-8">{/* Team A */}
+        <div className="space-y-8">
+          {/* 比賽日期選擇 */}
+          <div className="card p-8">
+            <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">比賽日期</label>
+            <input
+              type="date"
+              value={gameDate}
+              onChange={(e) => onGameDateChange(e.target.value)}
+              className="w-full bg-cream/50 border-b-2 border-gray-300 focus:border-accent px-2 py-3 text-dark text-lg focus:outline-none transition-colors"
+            />
+            <p className="text-xs text-dark/40 mt-2">可選擇過去或未來的日期記錄比賽</p>
+          </div>
+
+          {/* Team A */}
           <div className="card p-8">
             <div className="mb-6">
               <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">主隊名稱</label>

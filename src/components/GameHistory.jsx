@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 export default function GameHistory({ onBack, onViewGame }) {
   const [games, setGames] = useState([])
   const [loading, setLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(null)
+  const [expandedDates, setExpandedDates] = useState({}) // 追蹤哪些日期是展開的
 
   useEffect(() => {
     loadGames()
@@ -69,6 +69,13 @@ export default function GameHistory({ onBack, onViewGame }) {
     })
   }
 
+  const toggleDate = (date) => {
+    setExpandedDates(prev => ({
+      ...prev,
+      [date]: !prev[date]
+    }))
+  }
+
   if (!supabase) {
     return (
       <div className="min-h-screen bg-cream p-6">
@@ -118,60 +125,88 @@ export default function GameHistory({ onBack, onViewGame }) {
             <div className="text-sm text-dark/40 mt-2">開始你的第一場比賽吧！</div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {Object.entries(gamesByDate).map(([date, dateGames]) => (
-              <div key={date}>
-                <div className="text-sm font-medium text-dark/60 mb-3 uppercase tracking-wider">
-                  {formatDate(date)}
-                </div>
-                <div className="space-y-3">
-                  {dateGames.map((game) => (
-                    <button
-                      key={game.id}
-                      onClick={() => onViewGame(game.id)}
-                      className="card p-5 w-full text-left hover:shadow-lg hover:scale-[1.02] transition-all duration-200"
-                    >
-                      <div className="flex items-center justify-between mb-3">
+          <div className="space-y-4">
+            {Object.entries(gamesByDate).map(([date, dateGames]) => {
+              const isExpanded = expandedDates[date]
+              
+              return (
+                <div key={date} className="card overflow-hidden">
+                  {/* 日期標題（可點擊展開/收合） */}
+                  <button
+                    onClick={() => toggleDate(date)}
+                    className="w-full p-5 text-left hover:bg-accent/5 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-lg font-serif font-bold text-dark mb-1">
+                          {formatDate(date)}
+                        </div>
                         <div className="text-xs text-dark/40">
-                          {formatTime(game.created_at)}
-                        </div>
-                        <div className={`text-xs px-2 py-1 rounded ${
-                          game.team_a_score > game.team_b_score
-                            ? 'bg-accent/10 text-accent'
-                            : game.team_a_score < game.team_b_score
-                            ? 'bg-dark/10 text-dark'
-                            : 'bg-gray-100 text-dark/60'
-                        }`}>
-                          {game.team_a_score > game.team_b_score
-                            ? game.team_a_name + ' 勝'
-                            : game.team_a_score < game.team_b_score
-                            ? game.team_b_name + ' 勝'
-                            : '平手'}
+                          {dateGames.length} 場比賽
                         </div>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="text-sm text-dark/60">{game.team_a_name}</div>
-                          <div className="text-3xl font-serif font-bold text-accent">
-                            {game.team_a_score}
-                          </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-sm text-dark/60">
+                          {dateGames.filter(g => g.team_a_score > g.team_b_score).length} 勝
                         </div>
-                        <div className="text-dark/20 text-xl font-serif px-4">:</div>
-                        <div className="flex-1 text-right">
-                          <div className="text-sm text-dark/60">{game.team_b_name}</div>
-                          <div className="text-3xl font-serif font-bold text-dark">
-                            {game.team_b_score}
-                          </div>
+                        <div className="text-2xl text-dark/40">
+                          {isExpanded ? '▼' : '▶'}
                         </div>
                       </div>
-                      <div className="text-center mt-3 text-xs text-dark/40">
-                        點擊查看詳細數據 →
+                    </div>
+                  </button>
+
+                  {/* 展開的比賽列表 */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-200 bg-cream/30">
+                      <div className="p-3 space-y-3">
+                        {dateGames.map((game) => (
+                          <button
+                            key={game.id}
+                            onClick={() => onViewGame(game.id)}
+                            className="card p-4 w-full text-left hover:shadow-md hover:scale-[1.01] transition-all duration-200"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="text-xs text-dark/40">
+                                {formatTime(game.created_at)}
+                              </div>
+                              <div className={`text-xs px-2 py-1 rounded ${
+                                game.team_a_score > game.team_b_score
+                                  ? 'bg-accent/10 text-accent'
+                                  : game.team_a_score < game.team_b_score
+                                  ? 'bg-dark/10 text-dark'
+                                  : 'bg-gray-100 text-dark/60'
+                              }`}>
+                                {game.team_a_score > game.team_b_score
+                                  ? game.team_a_name + ' 勝'
+                                  : game.team_a_score < game.team_b_score
+                                  ? game.team_b_name + ' 勝'
+                                  : '平手'}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="text-xs text-dark/60">{game.team_a_name}</div>
+                                <div className="text-2xl font-serif font-bold text-accent">
+                                  {game.team_a_score}
+                                </div>
+                              </div>
+                              <div className="text-dark/20 text-lg font-serif px-3">:</div>
+                              <div className="flex-1 text-right">
+                                <div className="text-xs text-dark/60">{game.team_b_name}</div>
+                                <div className="text-2xl font-serif font-bold text-dark">
+                                  {game.team_b_score}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
                       </div>
-                    </button>
-                  ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

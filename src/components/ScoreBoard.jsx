@@ -9,8 +9,7 @@ export default function ScoreBoard({ teams, stats, onShot, onUndoShot, onScore, 
     { key: 'defensiveRebounds', label: '防守籃板', points: 0, emoji: '⬇️' },
     { key: 'assists', label: '助攻', points: 0, emoji: '🤝' },
     { key: 'blocks', label: '阻攻', points: 0, emoji: '🚫' },
-    { key: 'turnovers', label: '失誤', points: 0, emoji: '⚠️' },
-  ]
+    { key: 'turnovers', label: '失誤', points: 0, emoji: '⚠️' },    { key: 'fouls', label: '犯規', points: 0, emoji: '🚨' },  ]
 
   const handleStatClick = (statKey, points) => {
     if (selectedPlayer) {
@@ -102,6 +101,12 @@ export default function ScoreBoard({ teams, stats, onShot, onUndoShot, onScore, 
                 </div>
                 <div className="flex gap-2">
                   <button
+                    onClick={() => onUndoShot(selectedPlayer, 2, false)}
+                    className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors text-xs font-medium"
+                  >
+                    ← 撒銷
+                  </button>
+                  <button
                     onClick={() => handleShootClick(2, false)}
                     className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-dark/70 rounded-lg transition-colors text-sm font-medium"
                   >
@@ -132,6 +137,12 @@ export default function ScoreBoard({ teams, stats, onShot, onUndoShot, onScore, 
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <button
+                    onClick={() => onUndoShot(selectedPlayer, 3, false)}
+                    className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors text-xs font-medium"
+                  >
+                    ← 撒銷
+                  </button>
                   <button
                     onClick={() => handleShootClick(3, false)}
                     className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-dark/70 rounded-lg transition-colors text-sm font-medium"
