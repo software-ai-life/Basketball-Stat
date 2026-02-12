@@ -1,7 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function ScoreBoard({ teams, stats, scores, onShot, onUndoShot, onScore, onUndo, showFloatingBar = true }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null)
+
+  // 換人後，如果目前選中的球員不在場上，自動清除選擇
+  useEffect(() => {
+    if (selectedPlayer && !teams.teamA.players.some(p => p.id === selectedPlayer)) {
+      setSelectedPlayer(null)
+    }
+  }, [teams.teamA.players])
 
   const statButtons = [
     { key: 'offensiveRebounds', label: '進攻籃板', points: 0, emoji: '⬆️' },

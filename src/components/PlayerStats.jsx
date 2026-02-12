@@ -9,6 +9,17 @@ export default function PlayerStats({ teams, stats, scores }) {
     return attempted > 0 ? Math.round((made / attempted) * 100) : 0
   }
 
+  // 取得所有有數據的球員（包含已換下的）
+  const allPlayersWithStats = Object.entries(stats)
+    .filter(([_, s]) => s.team === 'teamA')
+    .map(([id, s]) => ({
+      id,
+      name: s.name,
+      stats: s,
+      isOnCourt: teams.teamA.players.some(p => p.id === id)
+    }))
+    .sort((a, b) => calculateTotalPoints(b.stats) - calculateTotalPoints(a.stats))
+
   return (
     <div className="px-6 pt-6 pb-6">
       <div className="mb-6">
@@ -21,8 +32,7 @@ export default function PlayerStats({ teams, stats, scores }) {
       {/* 主隊統計 */}
       <div className="mb-8">
         <div className="space-y-3">
-          {teams.teamA.players.map((player) => {
-            const playerStats = stats[player.id]
+          {allPlayersWithStats.map(({ id, name, stats: playerStats, isOnCourt }) => {
             const totalPoints = calculateTotalPoints(playerStats)
             const fgPercentage = calculateFGPercentage(playerStats)
             const twoP = playerStats?.twoPointMade || 0
@@ -31,10 +41,13 @@ export default function PlayerStats({ teams, stats, scores }) {
             const threePA = playerStats?.threePointAttempted || 0
             
             return (
-              <div key={player.id} className="card p-5">
+              <div key={id} className={`card p-5 ${!isOnCourt ? 'opacity-70 border-l-4 border-l-gray-300' : ''}`}>
                 <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
                   <div>
-                    <div className="font-medium text-dark text-lg">{player.name}</div>
+                    <div className="font-medium text-dark text-lg">
+                      {name}
+                      {!isOnCourt && <span className="ml-2 text-xs text-dark/40 bg-gray-100 px-2 py-0.5 rounded">已換下</span>}
+                    </div>
                     <div className="text-xs text-dark/40 mt-1">投籃命中率 {fgPercentage}%</div>
                   </div>
                   <div className="text-3xl font-serif font-bold tabular-nums text-accent">

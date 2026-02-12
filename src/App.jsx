@@ -6,6 +6,7 @@ import TeamBScorer from './components/TeamBScorer'
 import GameHistory from './components/GameHistory'
 import PlayerAnalytics from './components/PlayerAnalytics'
 import GameDetail from './components/GameDetail'
+import SubstitutionModal from './components/SubstitutionModal'
 import { supabase } from './lib/supabase'
 
 function App() {
@@ -23,8 +24,11 @@ function App() {
   })
   const [stats, setStats] = useState({})
   const [view, setView] = useState('scoreboard') // 'scoreboard' or 'stats'
+  const [allPlayers, setAllPlayers] = useState([]) // 所有註冊球員
+  const [showSubstitution, setShowSubstitution] = useState(false) // 換人介面
 
-  const handleStartGame = (teamData) => {
+  const handleStartGame = (teamData, allPlayersList) => {
+    setAllPlayers(allPlayersList) // 保存所有球員名單
     setTeams(teamData)
     
     // 只初始化主隊球員的統計數據（包含投籃命中率）
@@ -147,6 +151,61 @@ function App() {
       ...prev,
       teamB: Math.max(0, prev.teamB - points)
     }))
+  }
+
+  const handleSubstitution = (outPlayerId, inPlayerName) => {
+    // 找到要換下的球員索引
+    const outPlayerIndex = teams.teamA.players.findIndex(p => p.id === outPlayerId)
+    if (outPlayerIndex === -1) return
+
+    // 檢查該球員是否之前已上過場（有既有數據）
+    const existingEntry = Object.entries(stats).find(
+      ([_, s]) => s.name === inPlayerName && s.team === 'teamA'
+    )
+
+    let playerId
+    if (existingEntry) {
+      // 球員之前上過場，沿用原本的 ID 和數據
+      playerId = existingEntry[0]
+    } else {
+      // 全新球員，創建新 ID 和空白數據
+      playerId = `teamA-${Date.now()}`
+      setStats(prev => ({
+        ...prev,
+        [playerId]: {
+          name: inPlayerName,
+          team: 'teamA',
+          twoPointMade: 0,
+          twoPointAttempted: 0,
+          threePointMade: 0,
+          threePointAttempted: 0,
+          steals: 0,
+          offensiveRebounds: 0,
+          defensiveRebounds: 0,
+          assists: 0,
+          blocks: 0,
+          turnovers: 0,
+          fouls: 0
+        }
+      }))
+    }
+
+    // 更新球隊陣容
+    const newPlayers = [...teams.teamA.players]
+    newPlayers[outPlayerIndex] = {
+      id: playerId,
+      name: inPlayerName
+    }
+
+    setTeams(prev => ({
+      ...prev,
+      teamA: {
+        ...prev.teamA,
+        players: newPlayers
+      }
+    }))
+
+    setShowSubstitution(false)
   }
 
   const handleSaveGame = async () => {
@@ -346,6 +405,12 @@ function App() {
             放棄比賽
           </button>
           <button
+            onClick={() => setShowSubstitution(true)}
+            className="flex-1 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all text-sm uppercase tracking-wider shadow-lg"
+          >
+            🔄 換人
+          </button>
+          <button
             onClick={handleSaveGame}
             className="flex-1 py-4 btn-primary text-sm uppercase tracking-wider shadow-lg"
           >
@@ -353,6 +418,16 @@ function App() {
           </button>
         </div>
       </div>
+
+      {/* 換人介面 */}
+      {showSubstitution && (
+        <SubstitutionModal
+          currentPlayers={teams.teamA.players}
+          allPlayers={allPlayers}
+          onSubstitute={handleSubstitution}
+          onClose={() => setShowSubstitution(false)}
+        />
+      )}
     </div>
   )
 }

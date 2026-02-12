@@ -116,7 +116,8 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
       }
     }
 
-    onStartGame(gameData)
+    // 傳遞所有球員名單給 App.jsx
+    onStartGame(gameData, validTeamA)
   }
 
   return (
