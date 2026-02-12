@@ -35,43 +35,46 @@ export default function ScoreBoard({ teams, stats, onShot, onUndoShot, onScore, 
 
   return (
     <div className="px-6 pt-6 pb-6">
-      {/* 主隊標題 */}
-      <div className="mb-6">
-        <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-gray-200">
-          <span className="text-accent text-base">★</span>
-          <span className="text-sm font-medium text-dark">{teams.teamA.name}</span>
+      {/* 浮動球員選擇器 - 固定在頂部 */}
+      <div className="fixed top-0 left-0 right-0 bg-cream/95 backdrop-blur-sm shadow-md z-50 px-6 py-4 border-b border-gray-200">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="inline-flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+              <span className="text-accent text-sm">★</span>
+              <span className="text-xs font-medium text-dark">{teams.teamA.name}</span>
+            </div>
+            <span className="text-xs text-dark/40">選擇球員</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {teams.teamA.players.map((player) => {
+              const playerStats = stats[player.id]
+              const totalPoints = calculateTotalPoints(playerStats)
+              
+              return (
+                <button
+                  key={player.id}
+                  onClick={() => setSelectedPlayer(player.id)}
+                  className={`flex-shrink-0 px-4 py-3 rounded-lg transition-all border-2 min-w-[140px] ${
+                    selectedPlayer === player.id
+                      ? 'bg-accent text-white border-accent shadow-md'
+                      : 'bg-white text-dark border-gray-200 hover:border-accent/50 active:scale-95'
+                  }`}
+                >
+                  <div className="font-medium text-sm mb-1 truncate">{player.name}</div>
+                  <div className={`text-xs font-mono tabular-nums ${
+                    selectedPlayer === player.id ? 'text-white/90' : 'text-dark/50'
+                  }`}>
+                    {totalPoints} 分
+                  </div>
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Player Selection */}
-      <div className="mb-8">
-        <div className="text-xs text-dark/50 mb-4 uppercase tracking-wider">選擇球員</div>
-        <div className="grid grid-cols-3 gap-3">
-          {teams.teamA.players.map((player) => {
-            const playerStats = stats[player.id]
-            const totalPoints = calculateTotalPoints(playerStats)
-            
-            return (
-              <button
-                key={player.id}
-                onClick={() => setSelectedPlayer(player.id)}
-                className={`p-5 rounded-xl transition-all border-2 ${
-                  selectedPlayer === player.id
-                    ? 'bg-accent text-white border-accent shadow-md scale-95'
-                    : 'bg-white text-dark border-gray-200 hover:border-accent/50 active:scale-95'
-                }`}
-              >
-                <div className="font-medium text-sm mb-2 truncate">{player.name}</div>
-                <div className={`text-xs font-mono tabular-nums ${
-                  selectedPlayer === player.id ? 'text-white/90' : 'text-dark/50'
-                }`}>
-                  {totalPoints} 分
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      </div>
+      {/* 主要內容區域 - 添加頂部間距避免被浮動條遮擋 */}
+      <div className="mt-32">
 
       {/* Stats Input */}
       {selectedPlayer ? (
@@ -232,6 +235,7 @@ export default function ScoreBoard({ teams, stats, onShot, onUndoShot, onScore, 
           <div className="text-sm uppercase tracking-wider">選擇一位球員開始記錄</div>
         </div>
       )}
+      </div>
     </div>
   )
 }

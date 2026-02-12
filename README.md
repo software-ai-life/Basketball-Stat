@@ -54,7 +54,15 @@ npm install
 2. 建立新專案
 3. 執行 SQL 腳本建立資料表
 4. 複製專案 URL 和 API Key
-5. 建立 `.env` 檔案並填入金鑰
+5. 建立 `.env` 檔案並填入金鑰：
+
+```env
+VITE_SUPABASE_URL=你的專案URL
+VITE_SUPABASE_ANON_KEY=你的anon_key
+VITE_ADMIN_PASSWORD=你的管理員密碼
+```
+
+⚠️ **重要**：`VITE_ADMIN_PASSWORD` 用於刪除比賽等敏感操作，請設定一個安全的密碼。
 
 ### 3. 執行開發伺服器
 

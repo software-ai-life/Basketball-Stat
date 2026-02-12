@@ -124,6 +124,49 @@ export default function GameDetail({ gameId, onBack }) {
     setIsEditing(false)
   }
 
+  const handleDeleteGame = async () => {
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD
+    
+    if (!adminPassword) {
+      alert('⚠️ 未設定管理員密碼，無法使用刪除功能。\n請在 .env 中設定 VITE_ADMIN_PASSWORD')
+      return
+    }
+    
+    // 提示刪除操作
+    if (!window.confirm('⚠️ 確定要刪除這場比賽嗎？\n此操作無法復原，將刪除比賽和所有球員數據。')) {
+      return
+    }
+    
+    // 要求輸入密碼
+    const inputPassword = prompt('🔒 請輸入管理員密碼以確認刪除：')
+    
+    if (!inputPassword) {
+      return // 用戶取消
+    }
+    
+    if (inputPassword !== adminPassword) {
+      alert('❌ 密碼錯誤，無法刪除')
+      return
+    }
+    
+    try {
+      // 刪除比賽（會自動級聯刪除 player_stats，因為有 ON DELETE CASCADE）
+      const { error } = await supabase
+        .from('games')
+        .delete()
+        .eq('id', gameId)
+      
+      if (error) throw error
+      
+      alert('✅ 比賽已刪除')
+      onBack() // 返回歷史記錄頁面
+      
+    } catch (error) {
+      console.error('刪除失敗:', error)
+      alert('❌ 刪除失敗: ' + error.message)
+    }
+  }
+
   const calculateTeamStats = () => {
     if (playerStats.length === 0) return null
     
@@ -199,29 +242,39 @@ export default function GameDetail({ gameId, onBack }) {
             ← 返回
           </button>
           
-          {!isEditing ? (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
-            >
-              ✏️ 編輯數據
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button
-                onClick={handleCancelEdit}
-                className="px-4 py-2 bg-gray-200 text-dark rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleSaveChanges}
-                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
-              >
-                💾 保存修改
-              </button>
-            </div>
-          )}
+          <div className="flex gap-2">
+            {!isEditing ? (
+              <>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
+                >
+                  ✏️ 編輯數據
+                </button>
+                <button
+                  onClick={handleDeleteGame}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                >
+                  🗑️ 刪除比賽
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 bg-gray-200 text-dark rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleSaveChanges}
+                  className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
+                >
+                  💾 保存修改
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* 比賽標題 */}

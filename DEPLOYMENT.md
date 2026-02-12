@@ -46,7 +46,13 @@ Zeabur 會自動：
 ```
 VITE_SUPABASE_URL=你的Supabase專案URL
 VITE_SUPABASE_ANON_KEY=你的Supabase匿名金鑰
+VITE_ADMIN_PASSWORD=你的管理員密碼
 ```
+
+⚠️ **重要**：
+- `VITE_ADMIN_PASSWORD` 用於刪除比賽等敏感操作
+- 請設定一個安全的密碼，只分享給需要管理權限的人
+- 這個密碼會在刪除操作時要求輸入
 
 3. 點擊 **Redeploy** 讓環境變數生效
 

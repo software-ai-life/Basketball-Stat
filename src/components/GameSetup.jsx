@@ -5,7 +5,9 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
   const [teamAName, setTeamAName] = useState('主隊')
   const [teamBName, setTeamBName] = useState('客隊')
   const [teamAPlayers, setTeamAPlayers] = useState([''])
+  const [selectedPlayers, setSelectedPlayers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [step, setStep] = useState(1) // 1: 設定名單, 2: 選擇上場5人
 
   // 從資料庫載入上次比賽的球員名單
   useEffect(() => {
@@ -66,19 +68,43 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
     setTeamAPlayers(teamAPlayers.filter((_, i) => i !== index))
   }
 
-  const handleStart = () => {
+  const handleNext = () => {
     const validTeamA = teamAPlayers.filter(name => name.trim())
 
-    if (validTeamA.length === 0) {
-      alert('主隊至少需要一位球員')
+    if (validTeamA.length < 5) {
+      alert('請至少註冊5位球員')
       return
     }
+
+    setStep(2)
+  }
+
+  const togglePlayerSelection = (index) => {
+    if (selectedPlayers.includes(index)) {
+      setSelectedPlayers(selectedPlayers.filter(i => i !== index))
+    } else {
+      if (selectedPlayers.length >= 5) {
+        alert('最多只能選擇5位上場球員')
+        return
+      }
+      setSelectedPlayers([...selectedPlayers, index])
+    }
+  }
+
+  const handleStart = () => {
+    if (selectedPlayers.length !== 5) {
+      alert('請選擇5位上場球員')
+      return
+    }
+
+    const validTeamA = teamAPlayers.filter(name => name.trim())
+    const activePlayers = selectedPlayers.map(index => validTeamA[index])
 
     const gameData = {
       teamA: {
         name: teamAName,
         color: 'team-a',
-        players: validTeamA.map((name, i) => ({ 
+        players: activePlayers.map((name, i) => ({ 
           id: `teamA-${i}`, 
           name: name.trim() 
         }))
@@ -127,20 +153,39 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
 
         {/* Teams Setup */}
         <div className="space-y-8">
-          {/* 比賽日期選擇 */}
-          <div className="card p-8">
-            <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">比賽日期</label>
-            <input
-              type="date"
-              value={gameDate}
-              onChange={(e) => onGameDateChange(e.target.value)}
-              className="w-full bg-cream/50 border-b-2 border-gray-300 focus:border-accent px-2 py-3 text-dark text-lg focus:outline-none transition-colors"
-            />
-            <p className="text-xs text-dark/40 mt-2">可選擇過去或未來的日期記錄比賽</p>
+          {/* 步驟指示器 */}
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+              step === 1 ? 'bg-accent text-white' : 'bg-white text-dark border border-gray-200'
+            }`}>
+              <span className="font-medium">1</span>
+              <span className="text-sm">註冊球員</span>
+            </div>
+            <div className="w-8 h-0.5 bg-gray-300" />
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
+              step === 2 ? 'bg-accent text-white' : 'bg-white text-dark border border-gray-200'
+            }`}>
+              <span className="font-medium">2</span>
+              <span className="text-sm">選擇上場5人</span>
+            </div>
           </div>
 
-          {/* Team A */}
-          <div className="card p-8">
+          {step === 1 ? (
+            <>
+              {/* 比賽日期選擇 */}
+              <div className="card p-8">
+                <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">比賽日期</label>
+                <input
+                  type="date"
+                  value={gameDate}
+                  onChange={(e) => onGameDateChange(e.target.value)}
+                  className="w-full bg-cream/50 border-b-2 border-gray-300 focus:border-accent px-2 py-3 text-dark text-lg focus:outline-none transition-colors"
+                />
+                <p className="text-xs text-dark/40 mt-2">可選擇過去或未來的日期記錄比賽</p>
+              </div>
+
+              {/* Team A */}
+              <div className="card p-8">
             <div className="mb-6">
               <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">主隊名稱</label>
               <input
@@ -203,15 +248,76 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
               <span>客隊只記錄總分，不記錄個別球員數據</span>
             </div>
           </div>
+
+          <button
+            onClick={handleNext}
+            className="w-full py-4 bg-accent hover:bg-accent/90 text-white rounded-xl transition-all text-lg font-medium uppercase tracking-wider shadow-md hover:shadow-lg active:scale-95"
+          >
+            下一步 →
+          </button>
+            </>) : (
+            <>
+              {/* 選擇上場5人 */}
+              <div className="card p-8">
+                <div className="mb-4">
+                  <h3 className="text-xl font-serif text-dark mb-2">選擇上場球員</h3>
+                  <p className="text-sm text-dark/60">從名單中選擇5位上場球員（已選 {selectedPlayers.length}/5）</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {teamAPlayers.filter(name => name.trim()).map((name, index) => (
+                    <button
+                      key={index}
+                      onClick={() => togglePlayerSelection(index)}
+                      className={`p-4 rounded-lg border-2 transition-all text-left ${
+                        selectedPlayers.includes(index)
+                          ? 'bg-accent text-white border-accent shadow-md'
+                          : 'bg-white text-dark border-gray-200 hover:border-accent/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{name}</span>
+                        {selectedPlayers.includes(index) && <span>✓</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setStep(1)
+                    setSelectedPlayers([])
+                  }}
+                  className="flex-1 py-4 bg-white border-2 border-gray-200 hover:border-accent text-dark hover:text-accent rounded-xl transition-all text-lg font-medium uppercase tracking-wider"
+                >
+                  ← 返回
+                </button>
+                <button
+                  onClick={handleStart}
+                  disabled={selectedPlayers.length !== 5}
+                  className={`flex-1 py-4 rounded-xl transition-all text-lg font-medium uppercase tracking-wider shadow-md ${
+                    selectedPlayers.length === 5
+                      ? 'bg-accent hover:bg-accent/90 text-white hover:shadow-lg active:scale-95'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  開始比賽 →
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Start Button */}
+        {step === 1 && (
         <button
           onClick={handleStart}
           className="w-full mt-10 py-5 btn-primary text-base uppercase tracking-wider shadow-lg hover:shadow-xl"
         >
           開始比賽
         </button>
+        )}
       </div>
     </div>
   )
