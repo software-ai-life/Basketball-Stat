@@ -151,13 +151,23 @@ export default function GameDetail({ gameId, onBack }) {
     
     try {
       // 刪除比賽（會自動級聯刪除 player_stats，因為有 ON DELETE CASCADE）
-      const { error } = await supabase
+      const { data, error, count } = await supabase
         .from('games')
         .delete()
         .eq('id', gameId)
+        .select()
       
-      if (error) throw error
+      if (error) {
+        console.error('刪除錯誤:', error)
+        throw error
+      }
       
+      // 檢查是否真的刪除了
+      if (!data || data.length === 0) {
+        throw new Error('刪除失敗：沒有資料被刪除。可能是權限問題，請檢查 Supabase RLS 政策。')
+      }
+      
+      console.log('成功刪除:', data)
       alert('✅ 比賽已刪除')
       onBack() // 返回歷史記錄頁面
       
