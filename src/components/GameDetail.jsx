@@ -26,7 +26,7 @@ export default function GameDetail({ gameId, onBack }) {
       
       if (gameError) throw gameError
       setGame(gameData)
-      setEditedTeamBScore(gameData.team_b_score) // 初始化客隊分數
+      setEditedTeamBScore(gameData.team_b_score || 0) // 初始化客隊分數
       
       // 載入球員數據
       const { data: statsData, error: statsError } = await supabase
@@ -70,7 +70,28 @@ export default function GameDetail({ gameId, onBack }) {
   }
 
   const handleSaveChanges = async () => {
+    const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD
+    
+    if (!adminPassword) {
+      alert('⚠️ 未設定管理員密碼，無法使用編輯功能。\n請在 .env 中設定 VITE_ADMIN_PASSWORD')
+      return
+    }
+    
+    // 要求輸入密碼
+    const inputPassword = prompt('🔒 請輸入管理員密碼以確認修改：')
+    
+    if (!inputPassword) {
+      return // 用戶取消
+    }
+    
+    if (inputPassword !== adminPassword) {
+      alert('❌ 密碼錯誤，無法保存修改')
+      return
+    }
+    
     try {
+      console.log('準備保存客隊分數:', editedTeamBScore)
+      
       // 更新每個球員的數據
       for (const stat of editedStats) {
         const { error } = await supabase
@@ -97,16 +118,21 @@ export default function GameDetail({ gameId, onBack }) {
       // 重新計算總分
       const teamAScore = editedStats.reduce((sum, stat) => sum + stat.total_points, 0)
       
+      console.log('保存比賽分數 - 主隊:', teamAScore, '客隊:', editedTeamBScore)
+      
       // 更新比賽分數
-      const { error: gameError } = await supabase
+      const { data: updatedGame, error: gameError } = await supabase
         .from('games')
         .update({ 
           team_a_score: teamAScore,
           team_b_score: editedTeamBScore
         })
         .eq('id', gameId)
+        .select()
       
       if (gameError) throw gameError
+      
+      console.log('更新後的比賽資料:', updatedGame)
       
       alert('✅ 修改已保存！')
       setIsEditing(false)
@@ -120,7 +146,7 @@ export default function GameDetail({ gameId, onBack }) {
 
   const handleCancelEdit = () => {
     setEditedStats([...playerStats]) // 恢復原始數據
-    setEditedTeamBScore(game.team_b_score) // 恢復客隊分數
+    setEditedTeamBScore(game.team_b_score || 0) // 恢復客隊分數
     setIsEditing(false)
   }
 
