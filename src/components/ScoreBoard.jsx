@@ -4,9 +4,9 @@ export default function ScoreBoard({ teams, stats, onShot, onUndoShot, onScore, 
   const [selectedPlayer, setSelectedPlayer] = useState(null)
 
   const statButtons = [
-    { key: 'steals', label: '抄截', points: 0, emoji: '✋' },
     { key: 'offensiveRebounds', label: '進攻籃板', points: 0, emoji: '⬆️' },
     { key: 'defensiveRebounds', label: '防守籃板', points: 0, emoji: '⬇️' },
+    { key: 'steals', label: '抄截', points: 0, emoji: '✋' },
     { key: 'assists', label: '助攻', points: 0, emoji: '🤝' },
     { key: 'blocks', label: '阻攻', points: 0, emoji: '🚫' },
     { key: 'turnovers', label: '失誤', points: 0, emoji: '⚠️' },    { key: 'fouls', label: '犯規', points: 0, emoji: '🚨' },  ]

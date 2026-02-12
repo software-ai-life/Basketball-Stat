@@ -308,16 +308,6 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
             </>
           )}
         </div>
-
-        {/* Start Button */}
-        {step === 1 && (
-        <button
-          onClick={handleStart}
-          className="w-full mt-10 py-5 btn-primary text-base uppercase tracking-wider shadow-lg hover:shadow-xl"
-        >
-          開始比賽
-        </button>
-        )}
       </div>
     </div>
   )
