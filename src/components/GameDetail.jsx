@@ -69,7 +69,7 @@ export default function GameDetail({ gameId, onBack }) {
     setEditedStats(newStats)
   }
 
-  const handleSaveChanges = async () => {
+  const handleStartEdit = () => {
     const adminPassword = import.meta.env.VITE_ADMIN_PASSWORD
     
     if (!adminPassword) {
@@ -77,26 +77,29 @@ export default function GameDetail({ gameId, onBack }) {
       return
     }
     
-    // 要求輸入密碼
-    const inputPassword = prompt('🔒 請輸入管理員密碼以確認修改：')
+    const inputPassword = prompt('🔒 請輸入管理員密碼以進入編輯模式：')
     
-    if (!inputPassword) {
-      return // 用戶取消
-    }
+    if (!inputPassword) return
     
     if (inputPassword !== adminPassword) {
-      alert('❌ 密碼錯誤，無法保存修改')
+      alert('❌ 密碼錯誤，無法編輯')
       return
     }
     
+    setIsEditing(true)
+  }
+
+  const handleSaveChanges = async () => {
     try {
-      console.log('準備保存客隊分數:', editedTeamBScore)
-      
-      // 更新每個球員的數據
+      // 更新每個球員的數據 (使用 upsert 確保寫入)
       for (const stat of editedStats) {
         const { error } = await supabase
           .from('player_stats')
-          .update({
+          .upsert({
+            id: stat.id,
+            game_id: gameId,
+            player_name: stat.player_name,
+            team: stat.team,
             two_point_made: stat.two_point_made,
             two_point_attempted: stat.two_point_attempted,
             three_point_made: stat.three_point_made,
@@ -110,7 +113,6 @@ export default function GameDetail({ gameId, onBack }) {
             turnovers: stat.turnovers,
             fouls: stat.fouls
           })
-          .eq('id', stat.id)
         
         if (error) throw error
       }
@@ -118,21 +120,20 @@ export default function GameDetail({ gameId, onBack }) {
       // 重新計算總分
       const teamAScore = editedStats.reduce((sum, stat) => sum + stat.total_points, 0)
       
-      console.log('保存比賽分數 - 主隊:', teamAScore, '客隊:', editedTeamBScore)
-      
-      // 更新比賽分數
-      const { data: updatedGame, error: gameError } = await supabase
+      // 更新比賽分數 (使用 upsert)
+      const { error: gameError } = await supabase
         .from('games')
-        .update({ 
+        .upsert({
+          id: gameId,
+          date: game.date,
+          team_a_name: game.team_a_name,
+          team_b_name: game.team_b_name,
           team_a_score: teamAScore,
-          team_b_score: editedTeamBScore
+          team_b_score: editedTeamBScore,
+          created_at: game.created_at
         })
-        .eq('id', gameId)
-        .select()
       
       if (gameError) throw gameError
-      
-      console.log('更新後的比賽資料:', updatedGame)
       
       alert('✅ 修改已保存！')
       setIsEditing(false)
@@ -282,7 +283,7 @@ export default function GameDetail({ gameId, onBack }) {
             {!isEditing ? (
               <>
                 <button
-                  onClick={() => setIsEditing(true)}
+                  onClick={handleStartEdit}
                   className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors text-sm font-medium"
                 >
                   ✏️ 編輯數據
