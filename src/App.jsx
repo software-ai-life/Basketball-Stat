@@ -261,21 +261,21 @@ function App() {
 
   return (
     <div className="min-h-screen bg-cream pb-20">
-      {/* Header with Scores */}
-      <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-6">
+      {/* Header with Scores - Sticky 在頂部，z-index 高於浮動欄 */}
+      <div className="sticky top-0 z-[60] bg-white border-b border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between px-6 py-4">
           <div className="flex-1 text-center">
-            <div className="text-xs text-dark/50 mb-2 uppercase tracking-wider">{teams.teamA.name}</div>
-            <div className="text-5xl font-serif font-bold text-accent tabular-nums">
+            <div className="text-xs text-dark/50 mb-1 uppercase tracking-wider">{teams.teamA.name}</div>
+            <div className="text-4xl font-serif font-bold text-accent tabular-nums">
               {scores.teamA}
             </div>
           </div>
           
-          <div className="px-6 text-dark/20 text-2xl font-serif">:</div>
+          <div className="px-4 text-dark/20 text-xl font-serif">:</div>
           
           <div className="flex-1 text-center">
-            <div className="text-xs text-dark/50 mb-2 uppercase tracking-wider">{teams.teamB.name}</div>
-            <div className="text-5xl font-serif font-bold text-dark tabular-nums">
+            <div className="text-xs text-dark/50 mb-1 uppercase tracking-wider">{teams.teamB.name}</div>
+            <div className="text-4xl font-serif font-bold text-dark tabular-nums">
               {scores.teamB}
             </div>
           </div>
@@ -307,15 +307,18 @@ function App() {
       </div>
 
       {/* Main Content */}
+      <div className={view === 'scoreboard' ? 'pt-16' : ''}>
       {view === 'scoreboard' ? (
         <>
           <ScoreBoard 
             teams={teams}
             stats={stats}
+            scores={scores}
             onShot={handleShot}
             onUndoShot={handleUndoShot}
             onScore={handleScore}
             onUndo={handleUndo}
+            showFloatingBar={true}
           />
           <TeamBScorer 
             teamName={teams.teamB.name}
@@ -331,6 +334,7 @@ function App() {
           scores={scores}
         />
       )}
+      </div>
 
       {/* Action Buttons */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-cream via-cream to-transparent">
