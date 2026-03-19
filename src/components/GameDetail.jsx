@@ -166,13 +166,8 @@ export default function GameDetail({ gameId, onBack }) {
       alert('⚠️ 未設定管理員密碼，無法使用刪除功能。\n請在 .env 中設定 VITE_ADMIN_PASSWORD')
       return
     }
-    
-    // 提示刪除操作
-    if (!window.confirm('⚠️ 確定要刪除這場比賽嗎？\n此操作無法復原，將刪除比賽和所有球員數據。')) {
-      return
-    }
-    
-    // 要求輸入密碼
+
+    // 先要求輸入密碼
     const inputPassword = prompt('🔒 請輸入管理員密碼以確認刪除：')
     
     if (!inputPassword) {
@@ -181,6 +176,11 @@ export default function GameDetail({ gameId, onBack }) {
     
     if (inputPassword !== adminPassword) {
       alert('❌ 密碼錯誤，無法刪除')
+      return
+    }
+
+    // 再提示刪除操作
+    if (!window.confirm('⚠️ 確定要刪除這場比賽嗎？\n此操作無法復原，將刪除比賽和所有球員數據。')) {
       return
     }
     
