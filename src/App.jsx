@@ -387,7 +387,7 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div className={view === 'scoreboard' ? 'pt-16' : ''}>
+      <div className={view === 'scoreboard' ? 'pt-20' : ''}>
       {view === 'scoreboard' ? (
         <>
           <ScoreBoard 

@@ -81,7 +81,7 @@ export default function ScoreBoard({ team, teamKey, stats, onShot, onUndoShot, o
       )}
 
       {/* 主要內容區域 - 添加頂部間距避免被浮動條遮擋 */}
-      <div className={showFloatingBar ? "mt-16" : ""}>
+      <div className={showFloatingBar ? "mt-20" : ""}>
 
       {/* Stats Input */}
       {selectedPlayer ? (
