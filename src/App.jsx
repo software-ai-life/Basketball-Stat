@@ -9,6 +9,22 @@ import GameDetail from './components/GameDetail'
 import SubstitutionModal from './components/SubstitutionModal'
 import { supabase } from './lib/supabase'
 
+const createInitialPlayerStat = (name, team) => ({
+  name,
+  team,
+  twoPointMade: 0,
+  twoPointAttempted: 0,
+  threePointMade: 0,
+  threePointAttempted: 0,
+  steals: 0,
+  offensiveRebounds: 0,
+  defensiveRebounds: 0,
+  assists: 0,
+  blocks: 0,
+  turnovers: 0,
+  fouls: 0
+})
+
 function App() {
   const [currentPage, setCurrentPage] = useState('setup') // 'setup', 'game', 'history', 'analytics', 'gameDetail'
   const [selectedGameId, setSelectedGameId] = useState(null)
@@ -24,33 +40,28 @@ function App() {
   })
   const [stats, setStats] = useState({})
   const [view, setView] = useState('scoreboard') // 'scoreboard' or 'stats'
-  const [allPlayers, setAllPlayers] = useState([]) // 所有註冊球員
+  const [allPlayers, setAllPlayers] = useState({ teamA: [], teamB: [], teamBMode: 'simple' })
   const [showSubstitution, setShowSubstitution] = useState(false) // 換人介面
+  const [activeTeam, setActiveTeam] = useState('teamA')
 
   const handleStartGame = (teamData, allPlayersList) => {
-    setAllPlayers(allPlayersList) // 保存所有球員名單
+    setAllPlayers(allPlayersList)
     setTeams(teamData)
-    
-    // 只初始化主隊球員的統計數據（包含投籃命中率）
+
     const initialStats = {}
+
     teamData.teamA.players.forEach(player => {
-      initialStats[player.id] = {
-        name: player.name,
-        team: 'teamA',
-        twoPointMade: 0,
-        twoPointAttempted: 0,
-        threePointMade: 0,
-        threePointAttempted: 0,
-        steals: 0,
-        offensiveRebounds: 0,
-        defensiveRebounds: 0,
-        assists: 0,
-        blocks: 0,
-        turnovers: 0,
-        fouls: 0
-      }
+      initialStats[player.id] = createInitialPlayerStat(player.name, 'teamA')
     })
+
+    if (teamData.teamB.trackPlayers) {
+      teamData.teamB.players.forEach(player => {
+        initialStats[player.id] = createInitialPlayerStat(player.name, 'teamB')
+      })
+    }
+
     setStats(initialStats)
+    setActiveTeam('teamA')
     setGameStarted(true)
     setCurrentPage('game')
   }
@@ -153,45 +164,26 @@ function App() {
     }))
   }
 
-  const handleSubstitution = (outPlayerId, inPlayerName) => {
-    // 找到要換下的球員索引
-    const outPlayerIndex = teams.teamA.players.findIndex(p => p.id === outPlayerId)
+  const handleSubstitution = (teamKey, outPlayerId, inPlayerName) => {
+    const outPlayerIndex = teams[teamKey].players.findIndex(p => p.id === outPlayerId)
     if (outPlayerIndex === -1) return
 
-    // 檢查該球員是否之前已上過場（有既有數據）
     const existingEntry = Object.entries(stats).find(
-      ([_, s]) => s.name === inPlayerName && s.team === 'teamA'
+      ([_, s]) => s.name === inPlayerName && s.team === teamKey
     )
 
     let playerId
     if (existingEntry) {
-      // 球員之前上過場，沿用原本的 ID 和數據
       playerId = existingEntry[0]
     } else {
-      // 全新球員，創建新 ID 和空白數據
-      playerId = `teamA-${Date.now()}`
+      playerId = `${teamKey}-${Date.now()}`
       setStats(prev => ({
         ...prev,
-        [playerId]: {
-          name: inPlayerName,
-          team: 'teamA',
-          twoPointMade: 0,
-          twoPointAttempted: 0,
-          threePointMade: 0,
-          threePointAttempted: 0,
-          steals: 0,
-          offensiveRebounds: 0,
-          defensiveRebounds: 0,
-          assists: 0,
-          blocks: 0,
-          turnovers: 0,
-          fouls: 0
-        }
+        [playerId]: createInitialPlayerStat(inPlayerName, teamKey)
       }))
     }
 
-    // 更新球隊陣容
-    const newPlayers = [...teams.teamA.players]
+    const newPlayers = [...teams[teamKey].players]
     newPlayers[outPlayerIndex] = {
       id: playerId,
       name: inPlayerName
@@ -199,8 +191,8 @@ function App() {
 
     setTeams(prev => ({
       ...prev,
-      teamA: {
-        ...prev.teamA,
+      [teamKey]: {
+        ...prev[teamKey],
         players: newPlayers
       }
     }))
@@ -267,6 +259,8 @@ function App() {
       setGameStarted(false)
       setScores({ teamA: 0, teamB: 0 })
       setStats({})
+      setAllPlayers({ teamA: [], teamB: [], teamBMode: 'simple' })
+      setActiveTeam('teamA')
       setView('scoreboard')
       setCurrentPage('setup')
       
@@ -281,6 +275,8 @@ function App() {
       setGameStarted(false)
       setScores({ teamA: 0, teamB: 0 })
       setStats({})
+      setAllPlayers({ teamA: [], teamB: [], teamBMode: 'simple' })
+      setActiveTeam('teamA')
       setView('scoreboard')
       setGameDate(new Date().toISOString().split('T')[0]) // 重置日期
       setCurrentPage('setup')
@@ -363,6 +359,31 @@ function App() {
             統計數據
           </button>
         </div>
+
+        {view === 'scoreboard' && teams.teamB.trackPlayers && (
+          <div className="grid grid-cols-2 border-t border-gray-200 bg-cream/60">
+            <button
+              onClick={() => setActiveTeam('teamA')}
+              className={`py-3 text-sm font-medium transition-colors ${
+                activeTeam === 'teamA'
+                  ? 'bg-accent text-white'
+                  : 'text-dark/60 hover:bg-white'
+              }`}
+            >
+              記錄 {teams.teamA.name}
+            </button>
+            <button
+              onClick={() => setActiveTeam('teamB')}
+              className={`py-3 text-sm font-medium transition-colors ${
+                activeTeam === 'teamB'
+                  ? 'bg-dark text-white'
+                  : 'text-dark/60 hover:bg-white'
+              }`}
+            >
+              記錄 {teams.teamB.name}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
@@ -370,21 +391,24 @@ function App() {
       {view === 'scoreboard' ? (
         <>
           <ScoreBoard 
-            teams={teams}
+            team={teams[activeTeam]}
+            teamKey={activeTeam}
             stats={stats}
-            scores={scores}
             onShot={handleShot}
             onUndoShot={handleUndoShot}
             onScore={handleScore}
             onUndo={handleUndo}
             showFloatingBar={true}
           />
-          <TeamBScorer 
-            teamName={teams.teamB.name}
-            score={scores.teamB}
-            onScore={handleTeamBScore}
-            onUndo={handleTeamBUndo}
-          />
+
+          {!teams.teamB.trackPlayers && (
+            <TeamBScorer 
+              teamName={teams.teamB.name}
+              score={scores.teamB}
+              onScore={handleTeamBScore}
+              onUndo={handleTeamBUndo}
+            />
+          )}
         </>
       ) : (
         <PlayerStats 
@@ -406,6 +430,9 @@ function App() {
           </button>
           <button
             onClick={() => setShowSubstitution(true)}
+            disabled={(allPlayers[activeTeam] || []).filter(
+              name => !teams[activeTeam].players.some(player => player.name === name)
+            ).length === 0}
             className="flex-1 py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all text-sm uppercase tracking-wider shadow-lg"
           >
             🔄 換人
@@ -422,9 +449,10 @@ function App() {
       {/* 換人介面 */}
       {showSubstitution && (
         <SubstitutionModal
-          currentPlayers={teams.teamA.players}
-          allPlayers={allPlayers}
-          onSubstitute={handleSubstitution}
+          teamName={teams[activeTeam].name}
+          currentPlayers={teams[activeTeam].players}
+          allPlayers={allPlayers[activeTeam] || []}
+          onSubstitute={(outPlayerId, inPlayerName) => handleSubstitution(activeTeam, outPlayerId, inPlayerName)}
           onClose={() => setShowSubstitution(false)}
         />
       )}

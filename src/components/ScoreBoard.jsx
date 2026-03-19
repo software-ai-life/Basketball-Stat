@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react'
 
-export default function ScoreBoard({ teams, stats, scores, onShot, onUndoShot, onScore, onUndo, showFloatingBar = true }) {
+export default function ScoreBoard({ team, teamKey, stats, onShot, onUndoShot, onScore, onUndo, showFloatingBar = true }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null)
 
-  // 換人後，如果目前選中的球員不在場上，自動清除選擇
   useEffect(() => {
-    if (selectedPlayer && !teams.teamA.players.some(p => p.id === selectedPlayer)) {
+    if (selectedPlayer && !team.players.some(p => p.id === selectedPlayer)) {
       setSelectedPlayer(null)
     }
-  }, [teams.teamA.players])
+  }, [team.players, selectedPlayer])
+
+  useEffect(() => {
+    setSelectedPlayer(null)
+  }, [teamKey])
 
   const statButtons = [
     { key: 'offensiveRebounds', label: '進攻籃板', points: 0, emoji: '⬆️' },
@@ -46,9 +49,10 @@ export default function ScoreBoard({ teams, stats, scores, onShot, onUndoShot, o
       {showFloatingBar && (
       <div className="fixed top-[140px] left-0 right-0 bg-white/95 backdrop-blur-sm shadow-md z-50 border-b border-gray-200">
         <div className="max-w-4xl mx-auto">
+          <div className="px-3 pt-3 text-xs text-dark/40 uppercase tracking-wider">目前記錄：{team.name}</div>
           {/* 球員按鈕 */}
           <div className="flex gap-1.5 px-3 py-3">
-            {teams.teamA.players.map((player) => {
+            {team.players.map((player) => {
               const playerStats = stats[player.id]
               const totalPoints = calculateTotalPoints(playerStats)
               
@@ -235,7 +239,7 @@ export default function ScoreBoard({ teams, stats, scores, onShot, onUndoShot, o
       ) : (
         <div className="text-center py-20 text-dark/30">
           <div className="text-5xl mb-4">👆</div>
-          <div className="text-sm uppercase tracking-wider">選擇一位球員開始記錄</div>
+          <div className="text-sm uppercase tracking-wider">選擇 {team.name} 球員開始記錄</div>
         </div>
       )}
       </div>

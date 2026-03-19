@@ -118,7 +118,15 @@ export default function GameDetail({ gameId, onBack }) {
       }
       
       // 重新計算總分
-      const teamAScore = editedStats.reduce((sum, stat) => sum + stat.total_points, 0)
+      const teamAScore = editedStats
+        .filter(stat => stat.team === game.team_a_name)
+        .reduce((sum, stat) => sum + (stat.total_points || 0), 0)
+
+      const trackedTeamBScore = editedStats
+        .filter(stat => stat.team === game.team_b_name)
+        .reduce((sum, stat) => sum + (stat.total_points || 0), 0)
+
+      const hasTrackedTeamBStats = editedStats.some(stat => stat.team === game.team_b_name)
       
       // 更新比賽分數 (使用 upsert)
       const { error: gameError } = await supabase
@@ -129,7 +137,7 @@ export default function GameDetail({ gameId, onBack }) {
           team_a_name: game.team_a_name,
           team_b_name: game.team_b_name,
           team_a_score: teamAScore,
-          team_b_score: editedTeamBScore,
+          team_b_score: hasTrackedTeamBStats ? trackedTeamBScore : editedTeamBScore,
           created_at: game.created_at
         })
       

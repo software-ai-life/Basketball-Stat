@@ -4,10 +4,11 @@ import { supabase } from '../lib/supabase'
 export default function PlayerAnalytics({ onBack }) {
   const [playerStats, setPlayerStats] = useState([])
   const [loading, setLoading] = useState(true)
+  const [groupMode, setGroupMode] = useState('player')
 
   useEffect(() => {
     loadPlayerStats()
-  }, [])
+  }, [groupMode])
 
   const loadPlayerStats = async () => {
     if (!supabase) {
@@ -22,13 +23,18 @@ export default function PlayerAnalytics({ onBack }) {
 
       if (error) throw error
 
-      // 彙總每個球員的數據
       const aggregated = {}
-      
+
       data.forEach(stat => {
-        if (!aggregated[stat.player_name]) {
-          aggregated[stat.player_name] = {
+        const playerKey = groupMode === 'team-player'
+          ? `${stat.team}__${stat.player_name}`
+          : stat.player_name
+
+        if (!aggregated[playerKey]) {
+          aggregated[playerKey] = {
             playerName: stat.player_name,
+            teamName: stat.team,
+            teams: new Set(),
             games: 0,
             totalPoints: 0,
             twoPointMade: 0,
@@ -43,8 +49,10 @@ export default function PlayerAnalytics({ onBack }) {
             turnovers: 0
           }
         }
-        
-        const player = aggregated[stat.player_name]
+
+        const player = aggregated[playerKey]
+        player.teamName = stat.team
+        player.teams.add(stat.team)
         player.games++
         player.twoPointMade += stat.two_point_made || 0
         player.twoPointAttempted += stat.two_point_attempted || 0
@@ -59,7 +67,12 @@ export default function PlayerAnalytics({ onBack }) {
         player.turnovers += stat.turnovers || 0
       })
 
-      const statsArray = Object.values(aggregated).sort((a, b) => b.totalPoints - a.totalPoints)
+      const statsArray = Object.values(aggregated)
+        .map(player => ({
+          ...player,
+          teams: Array.from(player.teams)
+        }))
+        .sort((a, b) => b.totalPoints - a.totalPoints)
       setPlayerStats(statsArray)
     } catch (error) {
       console.error('載入失敗:', error)
@@ -109,6 +122,35 @@ export default function PlayerAnalytics({ onBack }) {
             <p className="text-sm text-dark/50">累積表現數據</p>
           </div>
         </div>
+
+        <div className="grid grid-cols-2 gap-3 mt-5">
+          <button
+            onClick={() => setGroupMode('player')}
+            className={`py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+              groupMode === 'player'
+                ? 'bg-accent text-white border-accent'
+                : 'bg-white text-dark/60 border-gray-200 hover:border-accent/40'
+            }`}
+          >
+            依球員姓名彙總
+          </button>
+          <button
+            onClick={() => setGroupMode('team-player')}
+            className={`py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
+              groupMode === 'team-player'
+                ? 'bg-dark text-white border-dark'
+                : 'bg-white text-dark/60 border-gray-200 hover:border-dark/40'
+            }`}
+          >
+            依球隊 + 球員姓名彙總
+          </button>
+        </div>
+
+        <p className="text-xs text-dark/40 mt-3">
+          {groupMode === 'player'
+            ? '同一位朋友不論打主隊或客隊，都會合併成同一筆統計。'
+            : '同名球員會依所在球隊拆開，方便分開比較不同角色表現。'}
+        </p>
       </div>
 
       <div className="px-6 pt-6">
@@ -132,7 +174,7 @@ export default function PlayerAnalytics({ onBack }) {
               const avgPoints = player.games > 0 ? (player.totalPoints / player.games).toFixed(1) : 0
 
               return (
-                <div key={player.playerName} className="card p-6">
+                <div key={`${groupMode}-${player.teams.join('-')}-${player.playerName}`} className="card p-6">
                   {/* 排名徽章 */}
                   {index < 3 && (
                     <div className="inline-flex items-center gap-2 mb-3">
@@ -147,7 +189,9 @@ export default function PlayerAnalytics({ onBack }) {
                     <div>
                       <h3 className="text-xl font-bold text-dark mb-1">{player.playerName}</h3>
                       <div className="text-sm text-dark/50">
-                        {player.games} 場比賽 · 平均 {avgPoints} 分
+                        {groupMode === 'team-player'
+                          ? `${player.teamName} · ${player.games} 場比賽 · 平均 ${avgPoints} 分`
+                          : `${player.teams.join(' / ')} · ${player.games} 場比賽 · 平均 ${avgPoints} 分`}
                       </div>
                     </div>
                     <div className="text-right">

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function SubstitutionModal({ currentPlayers, allPlayers, onSubstitute, onClose }) {
+export default function SubstitutionModal({ teamName, currentPlayers, allPlayers, onSubstitute, onClose }) {
   const [selectedOut, setSelectedOut] = useState('')
   const [selectedIn, setSelectedIn] = useState('')
 
@@ -24,7 +24,7 @@ export default function SubstitutionModal({ currentPlayers, allPlayers, onSubsti
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
         <div className="mb-6">
           <h2 className="text-2xl font-serif font-bold text-dark mb-2">🔄 球員替換</h2>
-          <p className="text-sm text-dark/60">選擇要換下場和上場的球員</p>
+          <p className="text-sm text-dark/60">目前隊伍：{teamName}</p>
         </div>
 
         {/* 選擇換下的球員 */}

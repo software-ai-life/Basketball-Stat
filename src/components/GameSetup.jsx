@@ -4,12 +4,14 @@ import { supabase } from '../lib/supabase'
 export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics, gameDate, onGameDateChange }) {
   const [teamAName, setTeamAName] = useState('主隊')
   const [teamBName, setTeamBName] = useState('客隊')
+  const [teamBMode, setTeamBMode] = useState('simple')
   const [teamAPlayers, setTeamAPlayers] = useState([''])
-  const [selectedPlayers, setSelectedPlayers] = useState([])
+  const [teamBPlayers, setTeamBPlayers] = useState([''])
+  const [selectedTeamAPlayers, setSelectedTeamAPlayers] = useState([])
+  const [selectedTeamBPlayers, setSelectedTeamBPlayers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [step, setStep] = useState(1) // 1: 設定名單, 2: 選擇上場5人
+  const [step, setStep] = useState(1)
 
-  // 從資料庫載入上次比賽的球員名單
   useEffect(() => {
     loadLastGamePlayers()
   }, [])
@@ -21,10 +23,9 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
     }
 
     try {
-      // 查詢最近一場比賽
       const { data: lastGame, error: gameError } = await supabase
         .from('games')
-        .select('id')
+        .select('id, team_a_name, team_b_name')
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
@@ -34,18 +35,32 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
         return
       }
 
-      // 查詢該場比賽的球員名單
       const { data: playerStats, error: statsError } = await supabase
         .from('player_stats')
-        .select('player_name')
+        .select('player_name, team')
         .eq('game_id', lastGame.id)
         .order('player_name')
 
       if (statsError) throw statsError
 
-      if (playerStats && playerStats.length > 0) {
-        const playerNames = playerStats.map(stat => stat.player_name)
-        setTeamAPlayers(playerNames)
+      if (playerStats?.length) {
+        const pickNames = (teamName) => [...new Set(
+          playerStats
+            .filter(stat => stat.team === teamName)
+            .map(stat => stat.player_name)
+        )]
+
+        const lastTeamAPlayers = pickNames(lastGame.team_a_name)
+        const lastTeamBPlayers = pickNames(lastGame.team_b_name)
+
+        if (lastTeamAPlayers.length > 0) {
+          setTeamAPlayers(lastTeamAPlayers)
+        }
+
+        if (lastTeamBPlayers.length > 0) {
+          setTeamBPlayers(lastTeamBPlayers)
+          setTeamBMode('detailed')
+        }
       }
     } catch (error) {
       console.error('載入球員名單失敗:', error)
@@ -54,76 +69,160 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
     }
   }
 
-  const addPlayer = () => {
-    setTeamAPlayers([...teamAPlayers, ''])
-  }
+  const addPlayer = (setter, players) => setter([...players, ''])
 
-  const updatePlayer = (index, name) => {
-    const updated = [...teamAPlayers]
+  const updatePlayer = (setter, players, index, name) => {
+    const updated = [...players]
     updated[index] = name
-    setTeamAPlayers(updated)
+    setter(updated)
   }
 
-  const removePlayer = (index) => {
-    setTeamAPlayers(teamAPlayers.filter((_, i) => i !== index))
+  const removePlayer = (setter, players, index) => {
+    setter(players.filter((_, i) => i !== index))
+  }
+
+  const togglePlayerSelection = (selected, setter, index) => {
+    if (selected.includes(index)) {
+      setter(selected.filter(i => i !== index))
+      return
+    }
+
+    if (selected.length >= 5) {
+      alert('最多只能選擇 5 位上場球員')
+      return
+    }
+
+    setter([...selected, index])
   }
 
   const handleNext = () => {
     const validTeamA = teamAPlayers.filter(name => name.trim())
+    const validTeamB = teamBPlayers.filter(name => name.trim())
 
     if (validTeamA.length < 5) {
-      alert('請至少註冊5位球員')
+      alert('主隊至少需要註冊 5 位球員')
+      return
+    }
+
+    if (teamBMode === 'detailed' && validTeamB.length < 5) {
+      alert('客隊若要記錄球員數據，至少需要註冊 5 位球員')
       return
     }
 
     setStep(2)
   }
 
-  const togglePlayerSelection = (index) => {
-    if (selectedPlayers.includes(index)) {
-      setSelectedPlayers(selectedPlayers.filter(i => i !== index))
-    } else {
-      if (selectedPlayers.length >= 5) {
-        alert('最多只能選擇5位上場球員')
-        return
-      }
-      setSelectedPlayers([...selectedPlayers, index])
-    }
-  }
-
   const handleStart = () => {
-    if (selectedPlayers.length !== 5) {
-      alert('請選擇5位上場球員')
+    const validTeamA = teamAPlayers.filter(name => name.trim())
+    const validTeamB = teamBPlayers.filter(name => name.trim())
+
+    if (selectedTeamAPlayers.length !== 5) {
+      alert('請選擇主隊 5 位上場球員')
       return
     }
 
-    const validTeamA = teamAPlayers.filter(name => name.trim())
-    const activePlayers = selectedPlayers.map(index => validTeamA[index])
+    if (teamBMode === 'detailed' && selectedTeamBPlayers.length !== 5) {
+      alert('請選擇客隊 5 位上場球員')
+      return
+    }
+
+    const activeTeamAPlayers = selectedTeamAPlayers.map(index => validTeamA[index])
+    const activeTeamBPlayers = selectedTeamBPlayers.map(index => validTeamB[index])
 
     const gameData = {
       teamA: {
         name: teamAName,
         color: 'team-a',
-        players: activePlayers.map((name, i) => ({ 
-          id: `teamA-${i}`, 
-          name: name.trim() 
-        }))
+        trackPlayers: true,
+        players: activeTeamAPlayers.map((name, i) => ({ id: `teamA-${i}`, name: name.trim() }))
       },
       teamB: {
         name: teamBName,
         color: 'team-b',
-        players: []
+        trackPlayers: teamBMode === 'detailed',
+        players: teamBMode === 'detailed'
+          ? activeTeamBPlayers.map((name, i) => ({ id: `teamB-${i}`, name: name.trim() }))
+          : []
       }
     }
 
-    // 傳遞所有球員名單給 App.jsx
-    onStartGame(gameData, validTeamA)
+    onStartGame(gameData, {
+      teamA: validTeamA,
+      teamB: teamBMode === 'detailed' ? validTeamB : [],
+      teamBMode
+    })
   }
+
+  const renderPlayerInputs = (title, players, setter, placeholderPrefix) => (
+    <div>
+      <div className="mb-4">
+        <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">{title}</label>
+      </div>
+
+      <div className="space-y-3 mb-6">
+        {players.map((player, index) => (
+          <div key={`${title}-${index}`} className="flex gap-3">
+            <input
+              type="text"
+              value={player}
+              onChange={(e) => updatePlayer(setter, players, index, e.target.value)}
+              className="flex-1 bg-cream/50 border border-gray-300 focus:border-accent rounded-lg px-4 py-3 text-dark placeholder-dark/30 focus:outline-none transition-colors"
+              placeholder={`${placeholderPrefix} ${index + 1}`}
+            />
+            {players.length > 1 && (
+              <button
+                onClick={() => removePlayer(setter, players, index)}
+                className="px-4 py-3 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 text-dark/50 hover:text-red-500 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={() => addPlayer(setter, players)}
+        className="w-full py-3 btn-secondary text-sm uppercase tracking-wider"
+      >
+        + 新增球員
+      </button>
+    </div>
+  )
+
+  const renderSelectionCard = (title, description, players, selected, setter) => (
+    <div className="card p-8">
+      <div className="mb-4">
+        <h3 className="text-xl font-serif text-dark mb-2">{title}</h3>
+        <p className="text-sm text-dark/60">{description}（已選 {selected.length}/5）</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {players.map((name, index) => (
+          <button
+            key={`${title}-${index}`}
+            onClick={() => togglePlayerSelection(selected, setter, index)}
+            className={`p-4 rounded-lg border-2 transition-all text-left ${
+              selected.includes(index)
+                ? 'bg-accent text-white border-accent shadow-md'
+                : 'bg-white text-dark border-gray-200 hover:border-accent/50'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{name}</span>
+              {selected.includes(index) && <span>✓</span>}
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
+  const validTeamA = teamAPlayers.filter(name => name.trim())
+  const validTeamB = teamBPlayers.filter(name => name.trim())
 
   return (
     <div className="min-h-screen bg-cream p-6">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
+      <div className="max-w-3xl mx-auto">
         <div className="text-center mb-12 mt-8">
           <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-gray-200 mb-4">
             <span className="text-accent text-lg">★</span>
@@ -131,11 +230,8 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
           </div>
           <h1 className="text-5xl font-serif font-bold mb-4 text-dark">🏀 Basketball Scoreboard</h1>
           <h2 className="text-4xl font-serif text-accent mb-4">籃球計分</h2>
-          <p className="text-dark/60 text-sm max-w-md mx-auto">
-            專為比賽設計的計分系統，讓您專注於球賽本身
-          </p>
-          
-          {/* Navigation Buttons */}
+          <p className="text-dark/60 text-sm max-w-md mx-auto">專為比賽設計的計分系統，讓您專注於球賽本身</p>
+
           <div className="flex gap-3 mt-6 justify-center">
             <button
               onClick={onViewHistory}
@@ -152,9 +248,7 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
           </div>
         </div>
 
-        {/* Teams Setup */}
         <div className="space-y-8">
-          {/* 步驟指示器 */}
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className={`flex items-center gap-2 px-4 py-2 rounded-full ${
               step === 1 ? 'bg-accent text-white' : 'bg-white text-dark border border-gray-200'
@@ -167,13 +261,12 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
               step === 2 ? 'bg-accent text-white' : 'bg-white text-dark border border-gray-200'
             }`}>
               <span className="font-medium">2</span>
-              <span className="text-sm">選擇上場5人</span>
+              <span className="text-sm">選擇上場 5 人</span>
             </div>
           </div>
 
           {step === 1 ? (
             <>
-              {/* 比賽日期選擇 */}
               <div className="card p-8">
                 <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">比賽日期</label>
                 <input
@@ -185,110 +278,94 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
                 <p className="text-xs text-dark/40 mt-2">可選擇過去或未來的日期記錄比賽</p>
               </div>
 
-              {/* Team A */}
               <div className="card p-8">
-            <div className="mb-6">
-              <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">主隊名稱</label>
-              <input
-                type="text"
-                value={teamAName}
-                onChange={(e) => setTeamAName(e.target.value)}
-                className="w-full bg-cream/50 border-b-2 border-gray-300 focus:border-accent px-2 py-3 text-dark text-lg focus:outline-none transition-colors"
-                placeholder="輸入主隊名稱"
-              />
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">球員名單</label>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              {teamAPlayers.map((player, index) => (
-                <div key={index} className="flex gap-3">
+                <div className="mb-6">
+                  <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">主隊名稱</label>
                   <input
                     type="text"
-                    value={player}
-                    onChange={(e) => updatePlayer(index, e.target.value)}
-                    className="flex-1 bg-cream/50 border border-gray-300 focus:border-accent rounded-lg px-4 py-3 text-dark placeholder-dark/30 focus:outline-none transition-colors"
-                    placeholder={`球員 ${index + 1}`}
+                    value={teamAName}
+                    onChange={(e) => setTeamAName(e.target.value)}
+                    className="w-full bg-cream/50 border-b-2 border-gray-300 focus:border-accent px-2 py-3 text-dark text-lg focus:outline-none transition-colors"
+                    placeholder="輸入主隊名稱"
                   />
-                  {teamAPlayers.length > 1 && (
-                    <button
-                      onClick={() => removePlayer(index)}
-                      className="px-4 py-3 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 text-dark/50 hover:text-red-500 rounded-lg transition-colors"
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
-              ))}
-            </div>
+                {renderPlayerInputs('主隊球員名單', teamAPlayers, setTeamAPlayers, '主隊球員')}
+              </div>
 
-            <button
-              onClick={addPlayer}
-              className="w-full py-3 btn-secondary text-sm uppercase tracking-wider"
-            >
-              + 新增球員
-            </button>
-          </div>
-
-          {/* Team B */}
-          <div className="card p-8 bg-gradient-to-br from-white to-gray-50">
-            <div className="mb-4">
-              <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">客隊名稱</label>
-              <input
-                type="text"
-                value={teamBName}
-                onChange={(e) => setTeamBName(e.target.value)}
-                className="w-full bg-cream/50 border-b-2 border-gray-300 focus:border-dark px-2 py-3 text-dark text-lg focus:outline-none transition-colors"
-                placeholder="輸入客隊名稱"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-xs text-dark/50 mt-4 bg-accent/5 px-4 py-3 rounded-lg border border-accent/20">
-              <span className="text-accent">💡</span>
-              <span>客隊只記錄總分，不記錄個別球員數據</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleNext}
-            className="w-full py-4 bg-accent hover:bg-accent/90 text-white rounded-xl transition-all text-lg font-medium uppercase tracking-wider shadow-md hover:shadow-lg active:scale-95"
-          >
-            下一步 →
-          </button>
-            </>) : (
-            <>
-              {/* 選擇上場5人 */}
-              <div className="card p-8">
-                <div className="mb-4">
-                  <h3 className="text-xl font-serif text-dark mb-2">選擇上場球員</h3>
-                  <p className="text-sm text-dark/60">從名單中選擇5位上場球員（已選 {selectedPlayers.length}/5）</p>
+              <div className="card p-8 bg-gradient-to-br from-white to-gray-50">
+                <div className="mb-6">
+                  <label className="block text-sm text-dark/60 mb-3 uppercase tracking-wider">客隊名稱</label>
+                  <input
+                    type="text"
+                    value={teamBName}
+                    onChange={(e) => setTeamBName(e.target.value)}
+                    className="w-full bg-cream/50 border-b-2 border-gray-300 focus:border-dark px-2 py-3 text-dark text-lg focus:outline-none transition-colors"
+                    placeholder="輸入客隊名稱"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {teamAPlayers.filter(name => name.trim()).map((name, index) => (
+
+                <div className="mb-6">
+                  <div className="text-sm text-dark/60 mb-3 uppercase tracking-wider">客隊模式</div>
+                  <div className="grid grid-cols-2 gap-3">
                     <button
-                      key={index}
-                      onClick={() => togglePlayerSelection(index)}
-                      className={`p-4 rounded-lg border-2 transition-all text-left ${
-                        selectedPlayers.includes(index)
-                          ? 'bg-accent text-white border-accent shadow-md'
-                          : 'bg-white text-dark border-gray-200 hover:border-accent/50'
+                      onClick={() => setTeamBMode('simple')}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        teamBMode === 'simple'
+                          ? 'bg-dark text-white border-dark'
+                          : 'bg-white text-dark border-gray-200 hover:border-dark/40'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{name}</span>
-                        {selectedPlayers.includes(index) && <span>✓</span>}
+                      <div className="font-medium mb-1">不記錄</div>
+                      <div className={`text-xs ${teamBMode === 'simple' ? 'text-white/80' : 'text-dark/50'}`}>
+                        只記錄客隊總分
                       </div>
                     </button>
-                  ))}
+                    <button
+                      onClick={() => setTeamBMode('detailed')}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        teamBMode === 'detailed'
+                          ? 'bg-accent text-white border-accent'
+                          : 'bg-white text-dark border-gray-200 hover:border-accent/40'
+                      }`}
+                    >
+                      <div className="font-medium mb-1">記錄球員</div>
+                      <div className={`text-xs ${teamBMode === 'detailed' ? 'text-white/80' : 'text-dark/50'}`}>
+                        建立客隊名單並記錄個人數據
+                      </div>
+                    </button>
+                  </div>
                 </div>
+
+                {teamBMode === 'detailed' ? (
+                  renderPlayerInputs('客隊球員名單', teamBPlayers, setTeamBPlayers, '客隊球員')
+                ) : (
+                  <div className="flex items-center gap-2 text-xs text-dark/50 mt-4 bg-accent/5 px-4 py-3 rounded-lg border border-accent/20">
+                    <span className="text-accent">💡</span>
+                    <span>此模式下客隊只記錄總分，不記錄個別球員數據</span>
+                  </div>
+                )}
               </div>
+
+              <button
+                onClick={handleNext}
+                disabled={loading}
+                className="w-full py-4 bg-accent hover:bg-accent/90 disabled:opacity-50 text-white rounded-xl transition-all text-lg font-medium uppercase tracking-wider shadow-md hover:shadow-lg active:scale-95"
+              >
+                下一步 →
+              </button>
+            </>
+          ) : (
+            <>
+              {renderSelectionCard('主隊上場球員', '從主隊名單中選擇 5 位先發', validTeamA, selectedTeamAPlayers, setSelectedTeamAPlayers)}
+
+              {teamBMode === 'detailed' && renderSelectionCard('客隊上場球員', '從客隊名單中選擇 5 位先發', validTeamB, selectedTeamBPlayers, setSelectedTeamBPlayers)}
 
               <div className="flex gap-3">
                 <button
                   onClick={() => {
                     setStep(1)
-                    setSelectedPlayers([])
+                    setSelectedTeamAPlayers([])
+                    setSelectedTeamBPlayers([])
                   }}
                   className="flex-1 py-4 bg-white border-2 border-gray-200 hover:border-accent text-dark hover:text-accent rounded-xl transition-all text-lg font-medium uppercase tracking-wider"
                 >
@@ -296,9 +373,9 @@ export default function GameSetup({ onStartGame, onViewHistory, onViewAnalytics,
                 </button>
                 <button
                   onClick={handleStart}
-                  disabled={selectedPlayers.length !== 5}
+                  disabled={selectedTeamAPlayers.length !== 5 || (teamBMode === 'detailed' && selectedTeamBPlayers.length !== 5)}
                   className={`flex-1 py-4 rounded-xl transition-all text-lg font-medium uppercase tracking-wider shadow-md ${
-                    selectedPlayers.length === 5
+                    selectedTeamAPlayers.length === 5 && (teamBMode === 'simple' || selectedTeamBPlayers.length === 5)
                       ? 'bg-accent hover:bg-accent/90 text-white hover:shadow-lg active:scale-95'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
